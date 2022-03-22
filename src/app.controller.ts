@@ -19,25 +19,28 @@ export class AppController {
   async queueConsumer(@Body() result) {
     let message = result.message;
     let receiver = result.receiver;
+    console.log('receptor', message.body);
+
     let attempts = result.message.body.attempts
       ? result.message.body.attempts
         ? result.message.body.attempts
         : 0
       : result.message.deliveryCount;
-    console.log(message.body.attempts);
+    console.log(attempts);
 
-    try {
-      throw new Error('error');
-    } catch (error) {
-      if (attempts < 3) {
-        await receiver.abandonMessage(message);
-      } else if (attempts >= 3 && attempts < 10) {
-        message.body.attempts = attempts++;
-        await this.transporter.scheduleMessages('fila', message.body);
-      } else {
-        await receiver.deadLetterMessage(message);
-      }
+    // try {
+    //   throw new Error('error');
+    // } catch (error) {
+    if (attempts < 3) {
+      await receiver.abandonMessage(message);
+    } else if (attempts >= 3 && attempts < 10) {
+      message.body.attempts = attempts + 1;
+      await receiver.completeMessage(result.message);
+      await this.transporter.scheduleMessages('fila', message.body);
+    } else {
+      await receiver.deadLetterMessage(message);
     }
-    await receiver.completeMessage(result.message);
+    
+    //await receiver.completeMessage(result.message);
   }
 }
